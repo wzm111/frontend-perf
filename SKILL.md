@@ -11,9 +11,30 @@ Diagnose frontend performance issues with actionable fixes. Focus on Core Web Vi
 
 ## When to Activate
 - User types `/frontend-perf`
+- User asks for "frontend perf check", "check my bundle", "analyze performance"
 - Build config files detected: `vite.config.*`, `next.config.*`, `webpack.config.*`, `rollup.config.*`, `nuxt.config.*`, `astro.config.*`, `remix.config.*`
 - Package manager lock files detected alongside frontend source files
 - User asks about "performance", "bundle size", "lazy loading", "CLS", "LCP", "web vitals"
+
+## Slash Command Parameter Mapping / 斜杠命令参数映射
+
+Claude Code slash commands don't accept CLI-style arguments. Instead, infer the user's intent from their message and pass the equivalent flags to the script.
+
+| User Says / 用户说 | Maps To / 映射为 | Script Call |
+|---|---|---|
+| `/frontend-perf` | 基础诊断 | `bash scripts/frontend-perf.sh .` |
+| `/frontend-perf check bundle` | Bundle 分析 | `bash scripts/bundle-analyzer.sh .` |
+| `/frontend-perf check CWV` | Core Web Vitals | `bash scripts/core-web-vitals.sh .` |
+| `/frontend-perf --fix` / "fix my code" | 诊断 + 生成修复补丁 | `bash scripts/frontend-perf.sh . --fix` |
+| `/frontend-perf --verify` / "verify after build" | 诊断 + 产物验证 | `bash scripts/frontend-perf.sh . --verify` |
+| `/frontend-perf --serve` / "start preview" | 诊断 + 启动预览 | `bash scripts/frontend-perf.sh . --serve` |
+| `/frontend-perf --verify --serve` / "full check with preview" | 诊断 + 验证 + 预览 | `bash scripts/frontend-perf.sh . --verify --serve` |
+| "check my code splitting" | 代码分割 | `bash scripts/code-splitting.sh .` |
+| "check duplicate dependencies" | 重复依赖 | `bash scripts/duplicate-deps.sh .` |
+| "optimize my assets" | 资源优化 | `bash scripts/resource-optimizer.sh .` |
+| "run lighthouse" / "get lighthouse score" | 启动预览 + Lighthouse | `bash scripts/preview-server.sh . --lighthouse` |
+
+**Implementation rule:** When user invokes `/frontend-perf` followed by any descriptive text, parse the intent and append corresponding flags to the script call. Never tell the user to type bash commands manually — execute them via the shell tool.
 
 ## Tech Stack Detection
 
