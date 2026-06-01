@@ -185,7 +185,6 @@ bash scripts/frontend-perf.sh . --monorepo          # 诊断所有 workspace pac
 
 ```
 frontend-perf/
-├── .github/workflows/frontend-perf.yml  # GitHub Actions CI
 ├── .frontend-perf.yml                   # 配置文件模板
 ├── SKILL.md                             # Claude Code Skill 入口
 ├── README.md                            # 文档
@@ -422,19 +421,78 @@ bash scripts/frontend-perf.sh . --monorepo
 
 ## CI/CD Integration / CI 集成
 
-内置 GitHub Actions Workflow，复制到项目 `.github/workflows/` 即可启用：
+`frontend-perf` 是纯 CLI 工具，可在任意 CI/CD 平台集成。以下为常见平台的配置示例：
+
+### GitHub Actions
 
 ```yaml
-# .github/workflows/frontend-perf.yml
-# 已包含在 skill 仓库中，直接复制使用
+name: Frontend Performance Diagnosis
+on:
+  pull_request:
+    branches: [main, master]
+jobs:
+  perf:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with: { node-version: '20' }
+      - run: npm ci
+      - run: npm run build
+      - run: |
+          git clone --depth 1 https://github.com/wzm111/frontend-perf.git /tmp/frontend-perf
+          bash /tmp/frontend-perf/scripts/frontend-perf.sh . --json --verify
+      - uses: actions/upload-artifact@v4
+        with:
+          name: perf-report
+          path: frontend-perf-report.json
 ```
 
-功能：
+### GitLab CI
 
-- PR/Push 时自动触发诊断
-- 构建产物后运行 Lighthouse 验证
-- 在 PR 评论中输出结果
-- 上传 JSON 报告作为 artifact
+```yaml
+frontend-perf:
+  stage: test
+  image: node:20
+  script:
+    - npm ci
+    - npm run build
+    - git clone --depth 1 https://github.com/wzm111/frontend-perf.git /tmp/frontend-perf
+    - bash /tmp/frontend-perf/scripts/frontend-perf.sh . --json
+  artifacts:
+    paths:
+      - frontend-perf-report.json
+```
+
+### 阿里云云效 / 腾讯云 Coding / 通用 Shell
+
+```bash
+# 在构建阶段后执行
+npm run build
+
+# 安装诊断工具
+git clone --depth 1 https://github.com/wzm111/frontend-perf.git /tmp/frontend-perf
+
+# 运行诊断 + JSON 报告
+bash /tmp/frontend-perf/scripts/frontend-perf.sh . --json --verify
+
+# 上传报告到构建产物（各平台命令不同）
+# 阿里云: 云效自动收集 frontend-perf-report.json
+# 腾讯云 Coding: 在 artifacts 中配置
+```
+
+### Jenkins
+
+```groovy
+stage('Performance Diagnosis') {
+  steps {
+    sh 'npm run build'
+    sh 'git clone --depth 1 https://github.com/wzm111/frontend-perf.git /tmp/frontend-perf'
+    sh 'bash /tmp/frontend-perf/scripts/frontend-perf.sh . --json'
+    archiveArtifacts artifacts: 'frontend-perf-report.json'
+  }
+}
+```
 
 ---
 

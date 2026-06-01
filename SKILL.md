@@ -370,13 +370,19 @@ Use `--watch` to automatically re-run diagnosis when source files change:
 
 ## CI/CD Integration / CI 集成
 
-The included GitHub Actions workflow (`.github/workflows/frontend-perf.yml`) automatically:
+The skill can be integrated into any CI/CD pipeline (GitHub Actions, GitLab CI, Jenkins, Azure DevOps, 阿里云云效, 腾讯云 Coding):
 
-- Runs on PR/push to src/ or config changes
-- Installs dependencies and builds the project
-- Runs full diagnosis with optional Lighthouse
-- Posts results as PR comments
-- Uploads JSON report as artifact
+```bash
+# Generic CI integration steps:
+# 1. Build the project
+npm run build
+
+# 2. Clone and run diagnosis
+git clone --depth 1 https://github.com/wzm111/frontend-perf.git /tmp/frontend-perf
+bash /tmp/frontend-perf/scripts/frontend-perf.sh . --json --verify
+
+# 3. Archive frontend-perf-report.json as build artifact
+```
 
 ## Post-Diagnosis Verification / 诊断后验证
 
