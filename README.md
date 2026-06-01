@@ -4,6 +4,34 @@
 
 ## Quick Start / 快速开始
 
+### Claude Code 中使用（推荐）
+
+```text
+# 基础诊断
+/frontend-perf
+
+# 诊断 + 生成修复建议
+/frontend-perf --fix
+
+# 诊断 + 验证构建产物
+/frontend-perf --verify
+
+# 诊断 + 启动预览服务
+/frontend-perf --serve
+
+# 完整流程：诊断 → 验证 → 预览
+/frontend-perf --verify --serve
+
+# 专项诊断
+/frontend-perf check bundle      # Bundle 分析
+/frontend-perf check CWV         # Core Web Vitals
+/frontend-perf check splitting   # 代码分割
+```
+
+> 💡 **Claude Code 斜杠命令不支持原生参数传递**。通过在 `SKILL.md` 中配置**自然语言意图映射**，AI 会自动理解您的需求并调用对应脚本。
+
+### 直接执行脚本
+
 ```bash
 # 1. 克隆 skill 到 Claude Code skills 目录
 git clone https://github.com/wzm111/frontend-perf.git ~/.claude/skills/frontend-perf
@@ -11,8 +39,8 @@ git clone https://github.com/wzm111/frontend-perf.git ~/.claude/skills/frontend-
 # 2. 在项目目录下执行诊断
 bash ~/.claude/skills/frontend-perf/scripts/frontend-perf.sh
 
-# 3. 或在 Claude Code 中直接调用
-/frontend-perf
+# 3. 诊断 + 验证 + 预览（完整流程）
+bash scripts/frontend-perf.sh . --verify --serve
 
 # 4. 诊断特定目录
 bash scripts/frontend-perf.sh /path/to/project
@@ -90,7 +118,7 @@ bash scripts/frontend-perf.sh . --fix
 - **自动触发**：打开 `vite.config.ts`、`next.config.js` 等构建配置文件时自动激活
 - **指定目录**：`/frontend-perf analyze my-project/`
 
-### 直接执行脚本
+### 命令行执行
 
 ```bash
 # 完整诊断
