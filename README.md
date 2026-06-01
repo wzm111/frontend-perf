@@ -26,6 +26,11 @@
 /frontend-perf check bundle      # Bundle 分析
 /frontend-perf check CWV         # Core Web Vitals
 /frontend-perf check splitting   # 代码分割
+
+# 高级功能
+/frontend-perf --json            # 生成 JSON 报告
+/frontend-perf --watch           # 监视模式自动诊断
+/frontend-perf --monorepo        # Monorepo 全包诊断
 ```
 
 > 💡 **Claude Code 斜杠命令不支持原生参数传递**。通过在 `SKILL.md` 中配置**自然语言意图映射**，AI 会自动理解您的需求并调用对应脚本。
@@ -47,6 +52,18 @@ bash scripts/frontend-perf.sh /path/to/project
 
 # 5. 带修复建议模式
 bash scripts/frontend-perf.sh . --fix
+
+# 6. JSON 报告
+bash scripts/frontend-perf.sh . --json
+
+# 7. 监视模式（文件变化自动重新诊断）
+bash scripts/frontend-perf.sh . --watch --interval 5
+
+# 8. Monorepo 全包诊断
+bash scripts/frontend-perf.sh . --monorepo
+
+# 9. 自定义配置文件
+bash scripts/frontend-perf.sh . --config .frontend-perf.yml
 ```
 
 ---
@@ -149,6 +166,17 @@ bash scripts/post-verify.sh . --lighthouse # 产物解析 + Lighthouse
 bash scripts/preview-server.sh .                    # 仅启动服务
 bash scripts/preview-server.sh . --lighthouse       # 服务 + Lighthouse
 bash scripts/preview-server.sh . --lighthouse --port 8080  # 指定端口
+
+# JSON 报告
+bash scripts/frontend-perf.sh . --json              # 生成 frontend-perf-report.json
+bash scripts/json-aggregator.sh . report.json       # 指定输出文件名
+
+# 监视模式
+bash scripts/watch-mode.sh .                        # 默认 5 秒间隔
+bash scripts/watch-mode.sh . --interval 3           # 3 秒间隔
+
+# Monorepo 诊断
+bash scripts/frontend-perf.sh . --monorepo          # 诊断所有 workspace packages
 ```
 
 ---
@@ -157,17 +185,22 @@ bash scripts/preview-server.sh . --lighthouse --port 8080  # 指定端口
 
 ```
 frontend-perf/
-├── SKILL.md                          # Claude Code Skill 入口
-├── README.md                         # 文档
+├── .github/workflows/frontend-perf.yml  # GitHub Actions CI
+├── .frontend-perf.yml                   # 配置文件模板
+├── SKILL.md                             # Claude Code Skill 入口
+├── README.md                            # 文档
 └── scripts/
-    ├── frontend-perf.sh              # 主入口（执行全部检查 + 验证 + 预览）
-    ├── core-web-vitals.sh            # Core Web Vitals 诊断
-    ├── bundle-analyzer.sh            # Bundle 分析 + 依赖优化
-    ├── code-splitting.sh             # 代码分割检查
-    ├── duplicate-deps.sh             # 重复依赖检测
-    ├── resource-optimizer.sh         # 资源优化诊断
-    ├── post-verify.sh                # 诊断后验证（产物解析 + Lighthouse）
-    └── preview-server.sh             # 本地预览服务 + Lighthouse
+    ├── frontend-perf.sh                 # 主入口（全部检查 + 验证 + 预览）
+    ├── config-loader.sh                 # 配置文件加载器
+    ├── json-aggregator.sh               # JSON 报告聚合器
+    ├── watch-mode.sh                    # 监视模式
+    ├── core-web-vitals.sh               # Core Web Vitals 诊断
+    ├── bundle-analyzer.sh               # Bundle 分析 + 依赖优化
+    ├── code-splitting.sh                # 代码分割检查
+    ├── duplicate-deps.sh                # 重复依赖检测
+    ├── resource-optimizer.sh            # 资源优化诊断
+    ├── post-verify.sh                   # 诊断后验证（产物解析 + Lighthouse）
+    └── preview-server.sh                # 本地预览服务 + Lighthouse
 ```
 
 ---
@@ -287,6 +320,121 @@ export default defineConfig({
 | `highlight.js` | `highlight.js/lib/core` | ~100KB |
 | `chart.js` | Tree-shaken imports | ~50KB |
 | `jsdom` | Remove from browser bundle | ~200KB |
+
+---
+
+## Configuration / 配置文件
+
+在项目根目录创建 `.frontend-perf.yml` 自定义诊断规则：
+
+```yaml
+thresholds:
+  maxBundleSize: 500000      # 最大 JS Bundle 体积（字节）
+  maxImageSize: 102400       # 最大单张图片体积（字节）
+  maxVideoSize: 5242880      # 最大单个视频体积（字节）
+  maxCssSize: 102400         # 最大单个 CSS 文件体积（字节）
+  lcp: 2500                  # LCP 阈值（毫秒）
+  inp: 200                   # INP 阈值（毫秒）
+  cls: 0.1                   # CLS 阈值
+  ttfb: 600                  # TTFB 阈值（毫秒）
+
+rules:
+  ignore:
+    - src/legacy/**
+    - test/**
+    - **/*.test.ts
+  customReplacements:
+    - from: old-heavy-lib
+      to: new-light-lib
+```
+
+---
+
+## JSON Report / JSON 报告
+
+使用 `--json` 参数生成结构化 JSON 报告，便于 CI 解析和自动化处理：
+
+```bash
+bash scripts/frontend-perf.sh . --json
+```
+
+输出文件：`frontend-perf-report.json`
+
+```json
+{
+  "generatedAt": "2024-01-15T10:30:00Z",
+  "project": "my-app",
+  "framework": "React + Vite",
+  "summary": {
+    "score": "B",
+    "total_issues": 8,
+    "critical": 2,
+    "warning": 6
+  },
+  "issues": [
+    {
+      "severity": "critical",
+      "category": "Bundle",
+      "file": "src/App.tsx",
+      "line": 1,
+      "message": "Full lodash import",
+      "fix": "import { debounce } from 'lodash-es'"
+    }
+  ]
+}
+```
+
+---
+
+## Watch Mode / 监视模式
+
+使用 `--watch` 参数启动监视模式，源码变化时自动重新诊断：
+
+```bash
+# 默认 5 秒检查间隔
+bash scripts/frontend-perf.sh . --watch
+
+# 自定义间隔
+bash scripts/frontend-perf.sh . --watch --interval 3
+```
+
+依赖工具优先级：`fswatch` (macOS) → `inotifywait` (Linux) → 轮询降级
+
+---
+
+## Monorepo Support / Monorepo 支持
+
+使用 `--monorepo` 参数自动检测并诊断所有 workspace packages：
+
+```bash
+bash scripts/frontend-perf.sh . --monorepo
+```
+
+支持的 workspace 类型：
+
+| 类型  | 检测文件                    | 说明                                      |
+|-------|-----------------------------|-------------------------------------------|
+| pnpm  | `pnpm-workspace.yaml`       | 最优先检测                                |
+| npm   | `package.json` workspaces   | 检测 package.json 中的 workspaces 字段    |
+| lerna | `lerna.json`                | 兼容 lerna 项目                           |
+
+---
+
+## CI/CD Integration / CI 集成
+
+内置 GitHub Actions Workflow，复制到项目 `.github/workflows/` 即可启用：
+
+```yaml
+# .github/workflows/frontend-perf.yml
+# 已包含在 skill 仓库中，直接复制使用
+```
+
+功能：
+
+- PR/Push 时自动触发诊断
+- 构建产物后运行 Lighthouse 验证
+- 在 PR 评论中输出结果
+- 上传 JSON 报告作为 artifact
 
 ---
 

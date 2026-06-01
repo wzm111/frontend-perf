@@ -29,6 +29,9 @@ Claude Code slash commands don't accept CLI-style arguments. Instead, infer the 
 | `/frontend-perf --verify` / "verify after build" | 诊断 + 产物验证 | `bash scripts/frontend-perf.sh . --verify` |
 | `/frontend-perf --serve` / "start preview" | 诊断 + 启动预览 | `bash scripts/frontend-perf.sh . --serve` |
 | `/frontend-perf --verify --serve` / "full check with preview" | 诊断 + 验证 + 预览 | `bash scripts/frontend-perf.sh . --verify --serve` |
+| `/frontend-perf --json` / "generate report" | 输出 JSON 报告 | `bash scripts/frontend-perf.sh . --json` |
+| `/frontend-perf --watch` / "watch mode" | 监视模式自动诊断 | `bash scripts/frontend-perf.sh . --watch` |
+| `/frontend-perf --monorepo` / "check all packages" | Monorepo 全包诊断 | `bash scripts/frontend-perf.sh . --monorepo` |
 | "check my code splitting" | 代码分割 | `bash scripts/code-splitting.sh .` |
 | "check duplicate dependencies" | 重复依赖 | `bash scripts/duplicate-deps.sh .` |
 | "optimize my assets" | 资源优化 | `bash scripts/resource-optimizer.sh .` |
@@ -286,6 +289,9 @@ The skill can execute diagnostic scripts via the AI shell tool:
 |--------|---------|-------|
 | `scripts/post-verify.sh` | Build artifact verification + Lighthouse | `bash scripts/post-verify.sh [dir] [--lighthouse]` |
 | `scripts/preview-server.sh` | Local preview server + Lighthouse | `bash scripts/preview-server.sh [dir] [--lighthouse] [--port PORT]` |
+| `scripts/json-aggregator.sh` | JSON report generator | `bash scripts/json-aggregator.sh [dir] [output.json]` |
+| `scripts/watch-mode.sh` | Watch mode auto-diagnosis | `bash scripts/watch-mode.sh [dir] [--interval SEC]` |
+| `scripts/config-loader.sh` | Config file parser | Internal use |
 
 ### CLI Usage Examples
 
@@ -304,7 +310,73 @@ bash scripts/preview-server.sh . --lighthouse --port 8080
 
 # Quick verification only
 bash scripts/post-verify.sh . --lighthouse
+
+# JSON report
+bash scripts/frontend-perf.sh . --json
+
+# Watch mode (auto re-diagnosis on file change)
+bash scripts/frontend-perf.sh . --watch --interval 5
+
+# Monorepo: diagnose all workspace packages
+bash scripts/frontend-perf.sh . --monorepo
+
+# Custom config file
+bash scripts/frontend-perf.sh . --config .frontend-perf.yml
 ```
+
+## Monorepo Support / Monorepo 支持
+
+For monorepo projects (pnpm workspace, npm workspaces, lerna), use `--monorepo` to diagnose all workspace packages:
+
+- Auto-detects `pnpm-workspace.yaml`, `lerna.json`, or `package.json` workspaces
+- Runs full diagnosis on each package
+- Generates per-package JSON reports when `--json` is used
+
+## JSON Report / JSON 报告
+
+Use `--json` to generate a structured JSON report (`frontend-perf-report.json`):
+
+```json
+{
+  "generatedAt": "2024-01-15T10:30:00Z",
+  "project": "my-app",
+  "framework": "React + Vite",
+  "summary": {
+    "score": "B",
+    "total_issues": 8,
+    "critical": 2,
+    "warning": 6
+  },
+  "issues": [
+    {
+      "severity": "critical",
+      "category": "Bundle",
+      "file": "src/App.tsx",
+      "line": 1,
+      "message": "Full lodash import",
+      "fix": "import { debounce } from 'lodash-es'"
+    }
+  ]
+}
+```
+
+## Watch Mode / 监视模式
+
+Use `--watch` to automatically re-run diagnosis when source files change:
+
+- Supports `fswatch` (macOS), `inotifywait` (Linux), or polling fallback
+- Configurable interval with `--interval SECONDS`
+- Press Ctrl+C to exit
+
+## CI/CD Integration / CI 集成
+
+The included GitHub Actions workflow (`.github/workflows/frontend-perf.yml`) automatically:
+
+- Runs on PR/push to src/ or config changes
+- Installs dependencies and builds the project
+- Runs full diagnosis with optional Lighthouse
+- Posts results as PR comments
+- Uploads JSON report as artifact
 
 ## Post-Diagnosis Verification / 诊断后验证
 

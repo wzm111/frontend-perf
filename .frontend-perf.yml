@@ -1,0 +1,47 @@
+# Frontend Performance Diagnostic Configuration
+# 前端性能诊断配置文件
+# 将此文件复制到项目根目录并自定义阈值
+
+thresholds:
+  # Bundle size limits (bytes)
+  maxBundleSize: 500000      # Max total JS bundle size
+  maxImageSize: 102400       # Max single image size (100KB)
+  maxVideoSize: 5242880      # Max single video size (5MB)
+  maxCssSize: 102400         # Max single CSS file size (100KB)
+
+  # Core Web Vitals thresholds (milliseconds)
+  lcp: 2500                  # Largest Contentful Paint
+  inp: 200                   # Interaction to Next Paint
+  cls: 0.1                   # Cumulative Layout Shift
+  ttfb: 600                  # Time to First Byte
+
+rules:
+  # Paths to ignore during diagnosis
+  ignore:
+    - node_modules/**
+    - dist/**
+    - build/**
+    - .next/**
+    - coverage/**
+    - test/**
+    - tests/**
+    - **/*.test.ts
+    - **/*.test.tsx
+    - **/*.spec.ts
+    - **/*.spec.tsx
+    - src/legacy/**
+
+  # Custom package replacements
+  customReplacements:
+    - from: old-heavy-lib
+      to: new-light-lib
+    - from: deprecated-package
+      to: modern-alternative
+
+output:
+  # Default output format
+  format: terminal            # terminal | json
+  # JSON report file name (when format: json)
+  jsonFile: frontend-perf-report.json
+  # Include auto-fix patches in output
+  showFixes: true
